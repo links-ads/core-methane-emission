@@ -7,14 +7,10 @@ sources = src tests tools
 .uv:
 	@uv -V || echo 'Please install uv: https://docs.astral.sh/uv/getting-started/installation/'
 
-.PHONY: .pre-commit  ## Check that pre-commit is installed
-.pre-commit: .uv
-	@uv run pre-commit -V || uv pip install pre-commit
 
-.PHONY: install  ## Install all dependencies and pre-commit hooks
+.PHONY: install  ## Install all dependencies
 install: .uv
 	uv sync --all-groups
-	uv run pre-commit install --install-hooks
 
 .PHONY: format  ## Auto-format source files with ruff
 format: .uv

@@ -1,71 +1,72 @@
-# python-template
+# Methane Emission
 
-A simple template to bootstrap Python packages with [uv](https://docs.astral.sh/uv/).
+Applicazione Python per la raccolta dati di campo, conversione delle emissioni di metano e salvataggio nel dataset Excel.
 
-## Features
+---
 
-- **uv-native** — environment management, dependency resolution, and versioning in one tool.
-- **One config file** — `pyproject.toml` handles everything: dependencies, tools, versioning.
-- **Ruff** — single tool for linting and formatting (replaces black, isort, flake8).
-- **hatchling** — lightweight, modern build backend.
+## Struttura del Progetto
 
-## Getting Started
-
-1. Click "Use this template" and clone your new repository:
-
-   ```bash
-   git clone https://github.com/your-username/your-repo.git
-   cd your-repo
-   ```
-
-2. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you haven't already:
-
-   ```bash
-   curl -LsSf https://astral.sh/uv/install.sh | sh
-   ```
-
-3. Run the initialization script and follow the prompts:
-
-   ```bash
-   python init.py
-   ```
-
-4. Install all dependencies:
-
-   ```bash
-   uv sync --all-groups
-   ```
-
-5. You're good to go. Run `make help` to see all available commands.
-
-> **Note**
->
-> `init.py` is self-contained and will delete itself once completed.
-> It is safe to delete and edit the files manually instead.
-
-## Common Commands
-
-| Command        | Description                                  |
-|----------------|----------------------------------------------|
-| `make sync`    | Install all dependency groups                |
-| `make fmt`     | Format and auto-fix code with ruff           |
-| `make lint`    | Check style and lint (no changes)            |
-| `make test`    | Run tests with coverage report               |
-| `make clean`   | Remove build artifacts and cache files       |
-| `make release` | Bump version, tag, and push a new release    |
-
-## VS Code
-
-To format and sort imports on save, add this to your `settings.json`:
-
-```json
-{
-    "[python]": {
-        "editor.formatOnSave": true,
-        "editor.defaultFormatter": "charliermarsh.ruff",
-        "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit"
-        }
-    }
-}
 ```
+methane_emission/
+├── main.py                  # Entry point
+├── requirements.txt
+├── core/
+│   ├── conversions.py       # Formule di conversione (UNI 15446, IPCC)
+│   └── models.py            # Dataclass: SurveyData, EmissionData, Intervento
+├── data/
+│   └── excel_manager.py     # Lettura/scrittura file Excel
+└── ui/
+    ├── app.py               # Finestra principale + Notebook
+    ├── survey_frame.py      # Sezione Survey (9 campi)
+    ├── emission_frame.py    # Sezione Emissione + pulsante Converti
+    ├── result_frame.py      # Pannello risultati conversione
+    └── history_frame.py     # Tab storico interventi salvati
+```
+
+---
+
+## Installazione
+
+```bash
+cd methane_emission
+uv pip install -r requirements.txt
+python main.py
+```
+
+---
+
+## Formule di Conversione
+
+### Da PPM a Kg/h CH4 (UNI 15446, Tabella C.1)
+
+```
+ER = A × (SV)^B
+A = 0.00000187
+B = 0.873
+SV = valore in PPM
+```
+
+### Da %Vol a PPM
+
+```
+PPM = %Vol × 10.000
+(Esempio: 27 %Vol → 270.000 PPM)
+```
+
+### Da Kg/h CH4 a Kg/h CO2 equivalente (IPCC)
+
+```
+Kg/h CO2 = Kg/h CH4 × 29.8
+(GWP metano = 29.8 volte CO2)
+```
+
+---
+
+## Output Excel
+
+Il file `interventi_emissioni.xlsx` viene creato automaticamente alla prima registrazione.
+
+Colonne salvate:
+| Survey (9 col) | Emissione (5 col) |
+|---|---|
+| Tipologia Sito, Tubazione, Materiale, Pressione, Dispersione, Riparazione, Interruzione, Date | Unità, Valore, PPM, Kg/h CH4, **Fattore Emissione Kg/h CO2** |

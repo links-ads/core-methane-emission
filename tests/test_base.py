@@ -1,5 +1,5 @@
-from project_name.cli import main
-from project_name.core import greet
+from methane_emission.cli import main
+from methane_emission.core import greet
 
 
 def test_example_fixture(example_fixture):
@@ -11,7 +11,7 @@ def test_greet():
 
 
 def test_cli(monkeypatch, capsys):
-    monkeypatch.setattr("sys.argv", ["project-name", "world"])
+    monkeypatch.setattr("sys.argv", ["methane-emission", "world"])
     main()
     captured = capsys.readouterr()
     assert "Hello, world!" in captured.out
