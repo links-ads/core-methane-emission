@@ -1,9 +1,3 @@
-"""
-app_gradio.py
-Emission Tracker — interfaccia Gradio
-Sostituisce ui/ con un'unica app web servita in locale.
-"""
-
 import gradio as gr
 from datetime import date, datetime
 
@@ -52,6 +46,40 @@ def do_convert(unit, value_str):
     return note, ppm_str, ch4_str, co2_str
 
 
+def load_history():
+    records = get_all_interventi()
+    if not records:
+        return []
+    rows = []
+    for r in records:
+        rows.append(
+            [
+                r.get("Tipologia Sito (Categoria)", ""),
+                r.get("Tubazione", ""),
+                r.get("Tipologia Materiale", ""),
+                _fmt(r.get("Pressione Esercizio (bar)"), 2),
+                r.get("Classificazione Dispersione", ""),
+                r.get("Tipologia Riparazione", ""),
+                r.get("Interruzione Fornitura", ""),
+                r.get("Data Rilevamento Perdita", ""),
+                r.get("Data Esecuzione Riparazione", ""),
+                r.get("Unità Emissione", ""),
+                _fmt(r.get("Valore Inserito"), 4),
+                _fmt(r.get("PPM"), 2),
+                _fmt(r.get("Kg/h CH4"), 8),
+                _fmt(r.get("Fattore Emissione Kg/h CO2"), 6),
+            ]
+        )
+    return rows
+
+
+def on_tab_select(evt: gr.SelectData):
+    """Fired when any tab is clicked. Loads data only for the Storico tab (index 1)."""
+    if evt.index == 1:
+        return load_history()
+    return gr.skip()
+
+
 def do_save(
     tipologia_sito,
     tubazione,
@@ -65,7 +93,6 @@ def do_save(
     unit,
     value_str,
 ):
-    # Validate
     if not tipologia_sito or not tubazione:
         return "Compilare almeno Tipologia Sito e Tubazione.", load_history()
 
@@ -108,36 +135,9 @@ def do_save(
 
     try:
         row = save_intervento(Intervento(survey=survey, emission=emission))
-        return f"Salvato alla riga {row} di `{EXCEL_FILE}`", load_history()
+        return f"Salvato alla riga {row -2} di `{EXCEL_FILE}`", load_history()
     except Exception as e:
         return f"Errore salvataggio: {e}", load_history()
-
-
-def load_history():
-    records = get_all_interventi()
-    if not records:
-        return []
-    rows = []
-    for r in records:
-        rows.append(
-            [
-                r.get("Tipologia Sito (Categoria)", ""),
-                r.get("Tubazione", ""),
-                r.get("Tipologia Materiale", ""),
-                _fmt(r.get("Pressione Esercizio (bar)"), 2),
-                r.get("Classificazione Dispersione", ""),
-                r.get("Tipologia Riparazione", ""),
-                r.get("Interruzione Fornitura", ""),
-                r.get("Data Rilevamento Perdita", ""),
-                r.get("Data Esecuzione Riparazione", ""),
-                r.get("Unità Emissione", ""),
-                _fmt(r.get("Valore Inserito"), 4),
-                _fmt(r.get("PPM"), 2),
-                _fmt(r.get("Kg/h CH4"), 8),
-                _fmt(r.get("Fattore Emissione Kg/h CO2"), 6),
-            ]
-        )
-    return rows
 
 
 HISTORY_HEADERS = [
@@ -164,7 +164,7 @@ THEME = gr.themes.Soft(
     font=gr.themes.GoogleFont("Inter"),
 )
 
-with gr.Blocks(title="Emission Tracker") as demo:
+with gr.Blocks(title="Emission Tracker", theme=THEME) as demo:
 
     gr.Markdown(
         """
@@ -173,10 +173,9 @@ with gr.Blocks(title="Emission Tracker") as demo:
     """
     )
 
-    with gr.Tabs():
+    with gr.Tabs() as tabs:
         with gr.Tab("➕ Nuovo Intervento"):
 
-            # Survey section
             gr.Markdown("## 📍 SURVEY — Dati di Campo")
             with gr.Group():
                 with gr.Row():
@@ -241,7 +240,6 @@ with gr.Blocks(title="Emission Tracker") as demo:
                         placeholder="es. 16/03/2024",
                     )
 
-            # Emission section
             gr.Markdown("## 📊 EMISSIONE — Valore Rilevato")
             with gr.Group():
                 with gr.Row():
@@ -270,7 +268,6 @@ with gr.Blocks(title="Emission Tracker") as demo:
                 outputs=[out_note, out_ppm, out_ch4, out_co2],
             )
 
-            # Save
             gr.Markdown("---")
             with gr.Row():
                 btn_save = gr.Button(
@@ -280,7 +277,6 @@ with gr.Blocks(title="Emission Tracker") as demo:
 
             save_status = gr.Markdown("")
 
-            # History table (updated on save)
             history_table_main = gr.Dataframe(
                 headers=HISTORY_HEADERS,
                 datatype=["str"] * len(HISTORY_HEADERS),
@@ -308,46 +304,27 @@ with gr.Blocks(title="Emission Tracker") as demo:
 
             def reset_form():
                 return (
-                    None,
-                    None,
-                    None,  # dropdowns
-                    None,  # pressione
-                    None,
-                    None,  # classif, riparazione
-                    "NO",  # interruzione
+                    None, None, None,
+                    None, None, None,
+                    "NO", "", "",
+                    "PPM", None,
+                    "", "", "", "",
                     "",
-                    "",  # date
-                    "PPM",
-                    None,  # unit, value
-                    "",
-                    "",
-                    "",
-                    "",  # conversion outputs
-                    "",  # save status
                 )
 
             btn_reset.click(
                 reset_form,
                 outputs=[
-                    tipologia_sito,
-                    tubazione,
-                    tipologia_materiale,
-                    pressione,
-                    classif_dispersione,
-                    tipologia_riparazione,
-                    interruzione,
-                    data_rilevamento,
-                    data_riparazione,
-                    unit,
-                    value_input,
-                    out_note,
-                    out_ppm,
-                    out_ch4,
-                    out_co2,
+                    tipologia_sito, tubazione, tipologia_materiale,
+                    pressione, classif_dispersione, tipologia_riparazione,
+                    interruzione, data_rilevamento, data_riparazione,
+                    unit, value_input,
+                    out_note, out_ppm, out_ch4, out_co2,
                     save_status,
                 ],
             )
-        with gr.Tab("📋 Storico Interventi") as tab_storico:
+
+        with gr.Tab("📋 Storico Interventi"):
             gr.Markdown(f"### Dataset: `{EXCEL_FILE}`")
             btn_reload = gr.Button("🔄 Aggiorna", variant="secondary", scale=0)
             history_table = gr.Dataframe(
@@ -358,7 +335,6 @@ with gr.Blocks(title="Emission Tracker") as demo:
                 wrap=False,
             )
             btn_reload.click(fn=load_history, inputs=[], outputs=[history_table])
-            tab_storico.select(fn=load_history, inputs=[], outputs=[history_table])
 
         with gr.Tab("ℹ️ Formule & Riferimenti"):
             gr.Markdown(
@@ -394,13 +370,11 @@ Kg/h CO₂ = Kg/h CH₄ × {GWP_CH4}
 
 ## Struttura Excel Output
 
-| Sezione | Colonne |
-|---------|---------|
-| Survey (9) | Tipologia Sito, Tubazione, Materiale, Pressione, Dispersione, Riparazione, Interruzione, Data Rilevamento, Data Riparazione |
-| Emissione (5) | Unità, Valore Input, PPM, Kg/h CH₄, **Fattore Emissione Kg/h CO₂** |
+|Tipologia Sito| Tubazione| Materiale| Pressione| Dispersione| Riparazione| Interruzione| Data Rilevamento| Data Riparazione | Unità| Valore Input| PPM| Kg/h CH₄| **Fattore Emissione Kg/h CO₂** |
 """
             )
+    tabs.select(fn=on_tab_select, inputs=[], outputs=[history_table])
 
 
 if __name__ == "__main__":
-    demo.launch(inbrowser=False, theme=THEME, debug=True, show_error=True)
+    demo.launch(inbrowser=False, debug=True, show_error=True)

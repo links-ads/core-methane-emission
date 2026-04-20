@@ -6,7 +6,7 @@ from openpyxl.utils import get_column_letter
 
 from core.models import Intervento
 
-EXCEL_FILE = "/nfs/home/catalano/core-methane-emission/interventi_emissioni.xlsx"
+EXCEL_FILE = "interventi_emissioni.xlsx"
 SHEET_NAME = "Interventi"
 
 HEADERS = [
