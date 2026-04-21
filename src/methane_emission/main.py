@@ -54,17 +54,17 @@ def load_history():
     for r in records:
         rows.append(
             [
-                r.get("Tipologia Sito (Categoria)", ""),
-                r.get("Tubazione", ""),
-                r.get("Tipologia Materiale", ""),
+                r.get("Tipologia Sito (ME)", ""),
+                r.get("Tipologia Sito (LCA)", ""),
+                r.get("Tipologia di Materiale", ""),
                 _fmt(r.get("Pressione Esercizio (bar)"), 2),
                 r.get("Classificazione Dispersione", ""),
                 r.get("Tipologia Riparazione", ""),
                 r.get("Interruzione Fornitura", ""),
                 r.get("Data Rilevamento Perdita", ""),
                 r.get("Data Esecuzione Riparazione", ""),
-                r.get("Unità Emissione", ""),
-                _fmt(r.get("Valore Inserito"), 4),
+                r.get("Unità di Misura Emissione", ""),
+                _fmt(r.get("Valore Emissione"), 4),
                 _fmt(r.get("PPM"), 2),
                 _fmt(r.get("Kg/h CH4"), 8),
                 _fmt(r.get("Fattore Emissione Kg/h CO2"), 6),
@@ -97,11 +97,6 @@ def do_save(
         return "Compilare almeno Tipologia Sito e Tubazione.", load_history()
 
     try:
-        pressione_f = float(str(pressione).replace(",", ".")) if pressione else 0.0
-    except Exception:
-        return "Pressione non valida.", load_history()
-
-    try:
         value = float(str(value_str).replace(",", "."))
     except Exception:
         return "Valore emissione non valido.", load_history()
@@ -114,7 +109,7 @@ def do_save(
         tipologia_sito=tipologia_sito,
         tubazione=tubazione,
         tipologia_materiale=tipologia_materiale or "",
-        pressione_esercizio=pressione_f,
+        pressione_esercizio=pressione or "",
         classificazione_dispersione=classif_dispersione or "",
         tipologia_riparazione=tipologia_riparazione or "",
         interruzione_fornitura=interruzione or "",
@@ -180,39 +175,65 @@ with gr.Blocks(title="Emission Tracker", theme=THEME) as demo:
             with gr.Group():
                 with gr.Row():
                     tipologia_sito = gr.Dropdown(
-                        label="Tipologia Sito (Categoria) *",
+                        label="Tipologia Sito (ME) *",
                         choices=[
-                            "Distribuzione",
-                            "Trasporto",
-                            "Industriale",
-                            "Civile",
-                            "Altro",
+                            "City Gate (Cabina REMI)",
+                            "Rete di distribuzione (Tubazione Stradale)",
+                            "Linea di servizio (Allaccio)",
+                            "Accessori della rete (IRI/GR)",
                         ],
+                        value=None,
+                        info="Seleziona tipologia sito",
                     )
                     tubazione = gr.Dropdown(
-                        label="Tubazione *",
-                        choices=["Aerea", "Interrata"],
+                        label="Tipologia Sito (LCA) *",
+                        choices=["Interrato", "Aereo"],
+                        value=None,
+                        info="Seleziona tipologia tubazione",
                     )
                     tipologia_materiale = gr.Dropdown(
-                        label="Tipologia Materiale",
-                        choices=["Acciaio", "PEAD", "Ghisa", "Rame", "PVC", "Altro"],
+                        label="Tipologia di Materiale",
+                        choices=[
+                            "Acciaio",
+                            "Acciaio Zincato",
+                            "Acciaio Rivestito",
+                            "Polietilene",
+                            "Ghisa Duttile",
+                            "Ghisa Grigia",
+                            "PVC",
+                        ],
+                        value=None,
+                        info="Seleziona tipologia materiale",
                     )
 
                 with gr.Row():
-                    pressione = gr.Number(
+                    # TODO
+                    pressione = gr.Dropdown(
                         label="Pressione Esercizio (bar)",
-                        minimum=0,
-                        step=0.1,
+                        choices=[
+                            "7 specie (0.040 bar)",
+                            "6 specie (0.50 bar)",
+                            "5 specie",
+                            "4 specie",
+                            "3 specie",
+                            "2 specie",
+                            "1 specie (> 24 bar)",
+                        ],
+                        value=None,
+                        info="Seleziona pressione esercizio",
                     )
                     classif_dispersione = gr.Dropdown(
                         label="Classificazione Dispersione",
                         choices=[
-                            "Classe 1 - Critica",
-                            "Classe 2 - Maggiore",
-                            "Classe 3 - Minore",
-                            "Classe 4 - Trascurabile",
+                            "A1",
+                            "A2",
+                            "B",
+                            "C",
                         ],
+                        value=None,
+                        info="Seleziona classificazione dispersione",
                     )
+                    # TODO
                     tipologia_riparazione = gr.Dropdown(
                         label="Tipologia Riparazione",
                         choices=[
@@ -223,21 +244,21 @@ with gr.Blocks(title="Emission Tracker", theme=THEME) as demo:
                             "Fasciatura",
                             "Altro",
                         ],
+                        value=None,
+                        info="Seleziona tipologia riparazione",
                     )
 
                 with gr.Row():
                     interruzione = gr.Radio(
-                        label="Interruzione Fornitura",
-                        choices=["SI", "NO"],
-                        value="NO",
+                        label="Interruzione Fornitura", choices=["SI", "NO"]
                     )
                     data_rilevamento = gr.Textbox(
                         label="Data Rilevamento Perdita (GG/MM/AAAA)",
-                        placeholder="es. 15/03/2024",
+                        info="es. 15/03/2024",
                     )
                     data_riparazione = gr.Textbox(
                         label="Data Esecuzione Riparazione (GG/MM/AAAA)",
-                        placeholder="es. 16/03/2024",
+                        info="es. 16/03/2024",
                     )
 
             gr.Markdown("## 📊 EMISSIONE — Valore Rilevato")
@@ -246,13 +267,13 @@ with gr.Blocks(title="Emission Tracker", theme=THEME) as demo:
                     unit = gr.Radio(
                         label="Unità di Misura",
                         choices=["PPM", "%Vol", "gr/h CH4"],
-                        value="PPM",
                     )
                     value_input = gr.Number(
                         label="Valore Emissione",
                         minimum=0,
+                        info="Inserisci valore rilevato",
                     )
-                    btn_convert = gr.Button("⚡ Converti", variant="secondary", scale=0)
+                    btn_convert = gr.Button("⚡ Converti", variant="secondary", scale=1)
 
                 with gr.Row():
                     out_note = gr.Textbox(label="Formula applicata", interactive=False)
@@ -304,22 +325,42 @@ with gr.Blocks(title="Emission Tracker", theme=THEME) as demo:
 
             def reset_form():
                 return (
-                    None, None, None,
-                    None, None, None,
-                    "NO", "", "",
-                    "PPM", None,
-                    "", "", "", "",
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    "NO",
+                    "",
+                    "",
+                    "PPM",
+                    None,
+                    "",
+                    "",
+                    "",
+                    "",
                     "",
                 )
 
             btn_reset.click(
                 reset_form,
                 outputs=[
-                    tipologia_sito, tubazione, tipologia_materiale,
-                    pressione, classif_dispersione, tipologia_riparazione,
-                    interruzione, data_rilevamento, data_riparazione,
-                    unit, value_input,
-                    out_note, out_ppm, out_ch4, out_co2,
+                    tipologia_sito,
+                    tubazione,
+                    tipologia_materiale,
+                    pressione,
+                    classif_dispersione,
+                    tipologia_riparazione,
+                    interruzione,
+                    data_rilevamento,
+                    data_riparazione,
+                    unit,
+                    value_input,
+                    out_note,
+                    out_ppm,
+                    out_ch4,
+                    out_co2,
                     save_status,
                 ],
             )

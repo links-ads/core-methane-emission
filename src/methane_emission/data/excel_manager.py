@@ -6,21 +6,21 @@ from openpyxl.utils import get_column_letter
 
 from core.models import Intervento
 
-EXCEL_FILE = "interventi_emissioni.xlsx"
+EXCEL_FILE = "data/interventi_emissioni.xlsx"
 SHEET_NAME = "Interventi"
 
 HEADERS = [
-    "Tipologia Sito (Categoria)",
-    "Tubazione",
-    "Tipologia Materiale",
+    "Tipologia Sito (ME)",
+    "Tipologia Sito (LCA)",
+    "Tipologia di Materiale",
     "Pressione Esercizio (bar)",
     "Classificazione Dispersione",
     "Tipologia Riparazione",
     "Interruzione Fornitura",
     "Data Rilevamento Perdita",
     "Data Esecuzione Riparazione",
-    "Unità Emissione",
-    "Valore Inserito",
+    "Unità di Misura Emissione",
+    "Valore Emissione",
     "PPM",
     "Kg/h CH4",
     "Fattore Emissione Kg/h CO2",
@@ -131,9 +131,7 @@ def save_intervento(intervento: Intervento, filepath: str = EXCEL_FILE) -> int:
             cell.font = Font(name="Arial", size=10, bold=True, color="1B5E20")
 
         # Formato numerico
-        if header in ("Pressione Esercizio (bar)", "Valore Inserito"):
-            cell.number_format = "#,##0.000"
-        elif header in ("PPM", "Kg/h CH4", "Fattore Emissione Kg/h CO2"):
+        if header in ("PPM", "Kg/h CH4", "Fattore Emissione Kg/h CO2"):
             cell.number_format = "#,##0.000000"
 
     ws.row_dimensions[row].height = 18
