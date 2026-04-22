@@ -21,6 +21,8 @@ class SurveyData:
     interruzione_fornitura: str = ""  # SI / NO
     data_rilevamento_perdita: Optional[date] = None
     data_esecuzione_riparazione: Optional[date] = None
+    image_id: str = ""
+    image_path: str = ""
 
 
 @dataclass
@@ -46,6 +48,7 @@ class Intervento:
         s = self.survey
         e = self.emission
         return {
+            "ID": s.image_id,
             "Tipologia Sito (ME)": s.tipologia_sito,
             "Tipologia Sito (LCA)": s.tubazione,
             "Tipologia di Materiale": s.tipologia_materiale,
@@ -68,4 +71,5 @@ class Intervento:
             "PPM": e.ppm if e.ppm is not None else "",
             "Kg/h CH4": e.kgh_ch4 if e.kgh_ch4 is not None else "",
             "Fattore Emissione Kg/h CO2": e.kgh_co2 if e.kgh_co2 is not None else "",
+            "Image Path": s.image_path,
         }

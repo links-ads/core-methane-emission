@@ -156,4 +156,7 @@ cython_debug/
 .idea/
 .vscode/
 
+# Gradio temporary files
+.gradio_tmp/
+
 data/

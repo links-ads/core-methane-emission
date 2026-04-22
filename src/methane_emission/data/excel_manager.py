@@ -1,4 +1,5 @@
 import os
+import shutil
 from datetime import datetime
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -10,6 +11,7 @@ EXCEL_FILE = "data/interventi_emissioni.xlsx"
 SHEET_NAME = "Interventi"
 
 HEADERS = [
+    "ID",
     "Tipologia Sito (ME)",
     "Tipologia Sito (LCA)",
     "Tipologia di Materiale",
@@ -19,6 +21,7 @@ HEADERS = [
     "Interruzione Fornitura",
     "Data Rilevamento Perdita",
     "Data Esecuzione Riparazione",
+    "Image Path",
     "Unità di Misura Emissione",
     "Valore Emissione",
     "PPM",
@@ -47,7 +50,7 @@ def _create_workbook(filepath: str) -> Workbook:
     ws.title = SHEET_NAME
 
     # Riga 1: categoria Survey vs Emissione
-    survey_cols = 9
+    survey_cols = 11
     emission_cols = 5
 
     # Merge celle categoria Survey
@@ -84,7 +87,7 @@ def _create_workbook(filepath: str) -> Workbook:
     ws.freeze_panes = "A3"
 
     # Larghezze colonne
-    col_widths = [22, 16, 20, 20, 25, 22, 18, 22, 24, 16, 16, 14, 14, 22]
+    col_widths = [12, 22, 16, 20, 20, 25, 22, 18, 22, 24, 16, 16, 14, 14, 22, 30]
     for i, w in enumerate(col_widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = w
 
@@ -92,13 +95,37 @@ def _create_workbook(filepath: str) -> Workbook:
     return wb
 
 
-def save_intervento(intervento: Intervento, filepath: str = EXCEL_FILE) -> int:
+def save_intervento(
+    intervento: Intervento, filepath: str = EXCEL_FILE, image_file: str = None
+) -> int:
     """
     Salva un intervento nel file Excel.
+    Se fornito, salva anche l'immagine in data/image/{image_id}/
     Ritorna il numero di riga scritto.
     """
     if not os.path.exists(filepath):
         _create_workbook(filepath)
+
+    # Gestisci salvataggio immagine se fornita
+    image_path = ""
+    if image_file:
+        # Genera ID univoco basato su timestamp
+        image_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        intervento.survey.image_id = image_id
+
+        # Crea cartella per l'immagine
+        image_folder = f"data/image/{image_id}"
+        os.makedirs(image_folder, exist_ok=True)
+
+        # Copia l'immagine nella cartella
+        try:
+            filename = os.path.basename(image_file)
+            image_path = os.path.join(image_folder, filename)
+            shutil.copy2(image_file, image_path)
+            intervento.survey.image_path = image_path
+        except Exception as e:
+            print(f"Errore salvataggio immagine: {e}")
+            image_path = ""
 
     wb = load_workbook(filepath)
     ws = wb[SHEET_NAME]
@@ -122,9 +149,9 @@ def save_intervento(intervento: Intervento, filepath: str = EXCEL_FILE) -> int:
         cell.border = _thin_border()
 
         # Colorazione per categoria
-        if col_idx <= 9:
+        if col_idx <= 11:
             cell.fill = survey_fill
-        elif col_idx <= 11:
+        elif col_idx <= 16:
             cell.fill = emission_fill
         else:
             cell.fill = result_fill

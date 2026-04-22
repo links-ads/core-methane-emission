@@ -1,9 +1,17 @@
+import os
 import gradio as gr
 from datetime import date, datetime
 
 from core.conversions import convert_emission, GWP_CH4, A_COEFF, B_COEFF
 from core.models import Intervento, SurveyData, EmissionData
 from data.excel_manager import save_intervento, get_all_interventi, EXCEL_FILE
+
+# Crea directory temporanea locale per i file upload
+TEMP_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".gradio_tmp"
+)
+os.makedirs(TEMP_DIR, exist_ok=True)
+os.environ["GRADIO_TEMP_DIR"] = TEMP_DIR
 
 
 def _fmt(v, dec=6):
@@ -63,6 +71,7 @@ def load_history():
                 r.get("Interruzione Fornitura", ""),
                 r.get("Data Rilevamento Perdita", ""),
                 r.get("Data Esecuzione Riparazione", ""),
+                r.get("Image Path", ""),
                 r.get("Unità di Misura Emissione", ""),
                 _fmt(r.get("Valore Emissione"), 4),
                 _fmt(r.get("PPM"), 2),
@@ -90,6 +99,7 @@ def do_save(
     interruzione,
     data_rilevamento,
     data_riparazione,
+    image_file,
     unit,
     value_str,
 ):
@@ -129,7 +139,9 @@ def do_save(
     )
 
     try:
-        row = save_intervento(Intervento(survey=survey, emission=emission))
+        row = save_intervento(
+            Intervento(survey=survey, emission=emission), image_file=image_file
+        )
         return f"Salvato alla riga {row -2} di `{EXCEL_FILE}`", load_history()
     except Exception as e:
         return f"Errore salvataggio: {e}", load_history()
@@ -145,6 +157,7 @@ HISTORY_HEADERS = [
     "Interruzione",
     "Data Rilevamento",
     "Data Riparazione",
+    "Image Path",
     "Unità",
     "Valore Input",
     "PPM",
@@ -159,12 +172,11 @@ THEME = gr.themes.Soft(
     font=gr.themes.GoogleFont("Inter"),
 )
 
-with gr.Blocks(title="Emission Tracker", theme=THEME) as demo:
+with gr.Blocks(title="Emission Tracker", theme=THEME, css="style.css") as demo:
 
     gr.Markdown(
         """
     # 🏭 Emission Tracker — Singolo Intervento
-    Raccolta dati Survey · Conversione emissioni CH₄ · Dataset Excel
     """
     )
 
@@ -261,9 +273,14 @@ with gr.Blocks(title="Emission Tracker", theme=THEME) as demo:
                         info="es. 16/03/2024",
                     )
 
+                with gr.Row():
+                    image_upload = gr.File(
+                        label="📸 Foto del Sito", file_types=["image"], type="filepath"
+                    )
+
             gr.Markdown("## 📊 EMISSIONE — Valore Rilevato")
             with gr.Group():
-                with gr.Row():
+                with gr.Row(equal_height=True):
                     unit = gr.Radio(
                         label="Unità di Misura",
                         choices=["PPM", "%Vol", "gr/h CH4"],
@@ -273,8 +290,11 @@ with gr.Blocks(title="Emission Tracker", theme=THEME) as demo:
                         minimum=0,
                         info="Inserisci valore rilevato",
                     )
-                    btn_convert = gr.Button("⚡ Converti", variant="secondary", scale=1)
-
+                    with gr.Column(min_width=120, elem_classes="btn-convert-col"):
+                        btn_convert = gr.Button(
+                            "⚡ Converti",
+                            variant="secondary",
+                        )
                 with gr.Row():
                     out_note = gr.Textbox(label="Formula applicata", interactive=False)
                     out_ppm = gr.Textbox(label="PPM", interactive=False)
@@ -317,6 +337,7 @@ with gr.Blocks(title="Emission Tracker", theme=THEME) as demo:
                     interruzione,
                     data_rilevamento,
                     data_riparazione,
+                    image_upload,
                     unit,
                     value_input,
                 ],
@@ -334,6 +355,7 @@ with gr.Blocks(title="Emission Tracker", theme=THEME) as demo:
                     "NO",
                     "",
                     "",
+                    None,
                     "PPM",
                     None,
                     "",
@@ -355,6 +377,7 @@ with gr.Blocks(title="Emission Tracker", theme=THEME) as demo:
                     interruzione,
                     data_rilevamento,
                     data_riparazione,
+                    image_upload,
                     unit,
                     value_input,
                     out_note,
@@ -377,43 +400,6 @@ with gr.Blocks(title="Emission Tracker", theme=THEME) as demo:
             )
             btn_reload.click(fn=load_history, inputs=[], outputs=[history_table])
 
-        with gr.Tab("ℹ️ Formule & Riferimenti"):
-            gr.Markdown(
-                f"""
-## Formule di Conversione
-
-### Da %Vol → PPM
-```
-PPM = %Vol × 10.000
-Esempio: 27 %Vol → 270.000 PPM
-```
-
-### Da PPM → Kg/h CH₄ &nbsp;*(UNI 15446, Tabella C.1)*
-```
-ER = A × (SV)^B
-A  = {A_COEFF}
-B  = {B_COEFF}
-SV = valore in PPM
-```
-
-### Da gr/h CH₄ → Kg/h CH₄
-```
-Kg/h = gr/h ÷ 1.000
-```
-
-### Da Kg/h CH₄ → Kg/h CO₂ equivalente &nbsp;*(IPCC)*
-```
-Kg/h CO₂ = Kg/h CH₄ × {GWP_CH4}
-(GWP metano = {GWP_CH4} volte CO₂)
-```
-
----
-
-## Struttura Excel Output
-
-|Tipologia Sito| Tubazione| Materiale| Pressione| Dispersione| Riparazione| Interruzione| Data Rilevamento| Data Riparazione | Unità| Valore Input| PPM| Kg/h CH₄| **Fattore Emissione Kg/h CO₂** |
-"""
-            )
     tabs.select(fn=on_tab_select, inputs=[], outputs=[history_table])
 
 
